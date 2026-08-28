@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ATBU AttenScan</string>
+    <string name="title_activity_main">ATBU AttenScan</string>
+    <string name="package_name">ng.edu.atbu.attenscan</string>
+    <string name="custom_url_scheme">ng.edu.atbu.attenscan</string>
+</resources>
