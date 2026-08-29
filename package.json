@@ -1,3 +1,4 @@
+
 {
   "name": "tanstack_start_ts",
   "private": true,
@@ -81,7 +82,6 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@cloudflare/workerd-windows-64": "^1.20260827.1",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "2.8.5",
     "@types/node": "^22.16.5",
@@ -103,3 +103,4 @@
     "wrangler": "^4.127.0"
   }
 }
+
