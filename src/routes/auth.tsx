@@ -1,149 +1,232 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { QrCode, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { z } from "zod";
-import { useSession } from "@/hooks/useSession";
-import { useEffect } from "react";
+
+// Import images from src/assets
+import hero1 from "../assests/Hero1.png";
+import logo from "../assests/logo.png";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
 const signInSchema = z.object({
-  email: z.string().trim().email({ message: "Enter a valid email" }).max(255),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }).max(72),
-});
-const signUpSchema = signInSchema.extend({
-  full_name: z.string().trim().min(2, { message: "Enter your full name" }).max(120),
-  matric_number: z.string().trim().max(30).optional(),
-  role: z.enum(["student", "lecturer"]),
-  level: z.string().max(10).optional(),
+  email: z
+    .string()
+    .trim()
+    .email({ message: "Enter a valid email" })
+    .max(255),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters" })
+    .max(72),
 });
 
+const signUpSchema = signInSchema.extend({
+  full_name: z
+    .string()
+    .trim()
+    .min(2, { message: "Enter your full name" })
+    .max(120),
+  matric_number: z
+    .string()
+    .trim()
+    .max(30)
+    .optional(),
+  role: z.enum(["student", "lecturer"]),
+  level: z
+    .string()
+    .max(10)
+    .optional(),
+});
+
+const Field = memo(function Field({
+  label,
+  ...props
+}: {
+  label: string;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+        {label}
+      </label>
+      <input
+        {...props}
+        className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm outline-none ring-ring/40 focus:ring-2"
+      />
+    </div>
+  );
+});
+
+const ModeToggle = memo(
+  ({
+    mode,
+    setMode,
+  }: {
+    mode: "signin" | "signup";
+    setMode: (m: "signin" | "signup") => void;
+  }) => (
+    <div className="mb-6 flex rounded-full border p-1 text-sm">
+      {(["signin", "signup"] as const).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => setMode(m)}
+          className={`flex-1 rounded-full py-2 font-semibold transition ${
+            mode === m
+              ? "bg-primary text-primary-foreground shadow-elev"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {m === "signin" ? "Sign in" : "Create account"}
+        </button>
+      ))}
+    </div>
+  )
+);
+
 function AuthPage() {
+  console.log("AuthPage rendering...");
+
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [signupRole, setSignupRole] = useState<"student" | "lecturer">("student");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { session } = useSession();
 
-  useEffect(() => {
-    if (session) navigate({ to: "/dashboard", replace: true });
-  }, [session, navigate]);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    setLoading(true);
-    try {
-      if (mode === "signin") {
-        const p = signInSchema.parse({ email: fd.get("email"), password: fd.get("password") });
-        const { error } = await supabase.auth.signInWithPassword(p);
-        if (error) throw error;
-        toast.success("Welcome back!");
-        navigate({ to: "/dashboard", replace: true });
-      } else {
-        const p = signUpSchema.parse({
-          email: fd.get("email"),
-          password: fd.get("password"),
-          full_name: fd.get("full_name"),
-          matric_number: fd.get("matric_number") || undefined,
-          role: fd.get("role"),
-          level: fd.get("level") || undefined,
-        });
-        const { error } = await supabase.auth.signUp({
-          email: p.email,
-          password: p.password,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: {
-              full_name: p.full_name,
-              matric_number: p.matric_number,
-              role: p.role,
-              level: p.level,
-              department: "Computer Science",
+  const onSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      console.log("📝 Form submitted, mode:", mode);
+      const fd = new FormData(e.currentTarget);
+      setLoading(true);
+      try {
+        if (mode === "signin") {
+          console.log("🔐 Signing in...");
+          const p = signInSchema.parse({
+            email: fd.get("email"),
+            password: fd.get("password"),
+          });
+          const { error } = await supabase.auth.signInWithPassword(p);
+          if (error) throw error;
+          toast.success("Welcome back!");
+          navigate({
+            to: "/dashboard",
+            replace: true,
+          });
+        } else {
+          console.log("📝 Signing up...");
+          const p = signUpSchema.parse({
+            email: fd.get("email"),
+            password: fd.get("password"),
+            full_name: fd.get("full_name"),
+            matric_number: fd.get("matric_number") || undefined,
+            role: fd.get("role"),
+            level: fd.get("level") || undefined,
+          });
+          const { error } = await supabase.auth.signUp({
+            email: p.email,
+            password: p.password,
+            options: {
+              emailRedirectTo: window.location.origin,
+              data: {
+                full_name: p.full_name,
+                matric_number: p.matric_number,
+                role: p.role,
+                level: p.level,
+                department: "Computer Science",
+              },
             },
-          },
-        });
-        if (error) throw error;
-        toast.success("Account created — you're signed in.");
-        navigate({ to: "/dashboard", replace: true });
+          });
+          if (error) throw error;
+          toast.success("Account created — you're signed in.");
+          navigate({
+            to: "/dashboard",
+            replace: true,
+          });
+        }
+      } catch (err: any) {
+        console.error("❌ Submit error:", err);
+        toast.error(
+          err?.errors?.[0]?.message ?? err?.message ?? "Something went wrong"
+        );
+      } finally {
+        setLoading(false);
       }
-    } catch (err: any) {
-      toast.error(err?.errors?.[0]?.message ?? err?.message ?? "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  }
+    },
+    [mode, navigate]
+  );
+
+  const handleRoleChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      setSignupRole(e.target.value as "student" | "lecturer");
+    },
+    []
+  );
+
+  const handleModeChange = useCallback((m: "signin" | "signup") => {
+    setMode(m);
+  }, []);
 
   return (
-    <div className="grid min-h-screen md:grid-cols-2">
-      {/* Left brand panel */}
-      <div className="relative hidden overflow-hidden bg-hero p-10 text-white md:flex md:flex-col md:justify-between">
-        <Link to="/" className="inline-flex items-center gap-2">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 backdrop-blur">
-            <QrCode className="h-5 w-5 text-gold" />
-          </div>
-          <div className="leading-tight">
-            <div className="font-display font-bold">ATBU Attendance</div>
-            <div className="text-[10px] uppercase tracking-widest text-white/70">Faculty of Computing</div>
-          </div>
-        </Link>
-        <div>
-          <h2 className="font-display text-4xl font-extrabold leading-tight">
-            Sign roll,<br />not paper.
-          </h2>
-          <p className="mt-3 max-w-sm text-white/70">
-            Rotating QR codes + GPS proximity keep every attendance record honest.
-          </p>
-        </div>
-        <div className="text-xs text-white/60">Abubakar Tafawa Balewa University · Bauchi</div>
-        <div className="pointer-events-none absolute -right-20 -bottom-20 h-72 w-72 rounded-full bg-gold/20 blur-3xl" />
-      </div>
+    <div className="grid min-h-dvh md:grid-cols-2">
+      {/* LEFT PANEL – only the hero image */}
+      <div
+        className="relative hidden overflow-hidden md:flex md:items-center md:justify-center bg-cover bg-center"
+        style={{ backgroundImage: `url(${hero1})` }}
+      />
 
-      {/* Right form */}
+      {/* RIGHT FORM – with centered logo at the top */}
       <div className="flex items-center justify-center bg-background p-6">
         <div className="w-full max-w-md">
-          <div className="mb-8 md:hidden">
-            <Link to="/" className="inline-flex items-center gap-2">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-hero">
-                <QrCode className="h-5 w-5 text-gold" />
-              </div>
-              <div className="font-display font-bold text-primary">ATBU Attendance</div>
+          {/* LOGO – centered, with FOCATTEN text */}
+          <div className="flex flex-col items-center mb-6">
+            <Link
+              to="/"
+              className="flex flex-col items-center gap-1"
+            >
+              <img
+                src={logo}
+                alt="FOCATTEN"
+                className="h-12 w-auto object-contain"
+              />
+              <span className="font-display font-bold text-primary text-lg">
+                FOCATTEN
+              </span>
             </Link>
           </div>
 
-          <div className="mb-6 flex rounded-full border p-1 text-sm">
-            {(["signin", "signup"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`flex-1 rounded-full py-2 font-semibold transition ${mode === m ? "bg-primary text-primary-foreground shadow-elev" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                {m === "signin" ? "Sign in" : "Create account"}
-              </button>
-            ))}
-          </div>
+          <ModeToggle mode={mode} setMode={handleModeChange} />
 
           <h1 className="font-display text-3xl font-bold">
             {mode === "signin" ? "Welcome back" : "Join the faculty"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "signin" ? "Sign in with your ATBU email." : "Register as a student or lecturer."}
+            {mode === "signin"
+              ? "Sign in with your ATBU email."
+              : "Register as a student or lecturer."}
           </p>
 
           <form onSubmit={onSubmit} className="mt-6 space-y-3">
             {mode === "signup" && (
               <>
-                <Field name="full_name" label="Full name" placeholder="Ahmad Musa" />
+                <Field
+                  name="full_name"
+                  label="Full name"
+                  placeholder="Ahmad Musa"
+                  autoComplete="name"
+                />
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-muted-foreground">I am a</label>
+                  <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                    I am a
+                  </label>
                   <select
                     name="role"
                     value={signupRole}
-                    onChange={(e) => setSignupRole(e.target.value as "student" | "lecturer")}
+                    onChange={handleRoleChange}
                     required
                     className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm"
                   >
@@ -153,14 +236,43 @@ function AuthPage() {
                 </div>
                 {signupRole === "student" && (
                   <div className="grid grid-cols-2 gap-3">
-                    <Field name="matric_number" label="Matric no." placeholder="18/45CSC/123" />
-                    <Field name="level" label="Level" placeholder="400" />
+                    <Field
+                      name="matric_number"
+                      label="Matric no."
+                      placeholder="18/45CSC/123"
+                      autoComplete="off"
+                    />
+                    <Field
+                      name="level"
+                      label="Level"
+                      placeholder="400"
+                      autoComplete="off"
+                    />
                   </div>
                 )}
               </>
             )}
-            <Field name="email" type="email" label="Email" placeholder="you@atbu.edu.ng" required />
-            <Field name="password" type="password" label="Password" placeholder="At least 6 characters" required />
+
+            <Field
+              name="email"
+              type="email"
+              label="Email"
+              placeholder="you@atbu.edu.ng"
+              required
+              autoComplete="email"
+              inputMode="email"
+            />
+
+            <Field
+              name="password"
+              type="password"
+              label="Password"
+              placeholder="At least 6 characters"
+              required
+              autoComplete={
+                mode === "signin" ? "current-password" : "new-password"
+              }
+            />
 
             <button
               type="submit"
@@ -173,18 +285,6 @@ function AuthPage() {
           </form>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-semibold text-muted-foreground">{label}</label>
-      <input
-        {...props}
-        className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm outline-none ring-ring/40 focus:ring-2"
-      />
     </div>
   );
 }

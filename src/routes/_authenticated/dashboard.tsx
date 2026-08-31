@@ -10,6 +10,9 @@ import { QrCode, ScanLine, BookOpen, Users, TrendingUp, TrendingDown, Minus, Pla
 import { toast } from "sonner";
 import { getStudentInsights, getLecturerRisk } from "@/lib/ai-insights.functions";
 
+// Import the logo
+import logo from "@/assests/logo.png";
+
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardRouter,
 });
@@ -18,9 +21,12 @@ function DashboardRouter() {
   const { role, profile, isLoading } = useProfile();
   return (
     <AppShell>
-      <header className="mb-6">
-        <p className="text-sm text-muted-foreground">Welcome back,</p>
-        <h1 className="font-display text-3xl font-bold text-primary">{profile?.full_name ?? "…"}</h1>
+      <header className="mb-6 flex items-center justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">Welcome back,</p>
+          <h1 className="font-display text-3xl font-bold text-primary">{profile?.full_name ?? "…"}</h1>
+        </div>
+        <img src={logo} alt="Logo" className="h-12 w-auto object-contain" />
       </header>
       {isLoading || !role ? (
         <div className="rounded-3xl border bg-card p-10 text-center text-muted-foreground">Loading…</div>
@@ -125,9 +131,6 @@ function StudentDash() {
           </div>
         </section>
       ) : null}
-
-
-
 
       <section>
         <h3 className="mb-3 font-display text-lg font-bold">Live sessions right now</h3>
@@ -307,8 +310,6 @@ function LecturerDash() {
       </section>
 
       <LecturerAIRisk />
-
-
 
       <section>
         <h3 className="mb-3 font-display text-lg font-bold">Recent sessions</h3>
@@ -650,5 +651,3 @@ function Metric({ label, value, tone }: { label: string; value: string | number;
     </div>
   );
 }
-
-
